@@ -126,7 +126,7 @@ def extract():
             }
         },
     }
-    cookies_file = os.environ.get("YT_COOKIES_FILE")
+    cookies_file = os.environ.get("YT_COOKIES_FILE") or "/app/cookies.txt"
     if cookies_file and os.path.exists(cookies_file):
         ydl_opts["cookiefile"] = cookies_file
     po_token = os.environ.get("YT_PO_TOKEN")
