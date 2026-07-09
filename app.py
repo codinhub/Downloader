@@ -3,6 +3,8 @@ import json
 import time
 import os
 import threading
+import urllib.request
+import urllib.parse
 from flask import Flask, request, jsonify, Response
 import yt_dlp
 
@@ -145,6 +147,62 @@ def extract():
         CACHE[url] = {"ts": now, "data": result}
 
     return jsonify(result)
+
+
+@app.route("/api/download")
+def download():
+    url = request.args.get("url", "").strip()
+    if not url or not url.startswith(("http://", "https://")):
+        return "Invalid URL", 400
+
+    try:
+        hdr_arg = request.args.get("h", "")
+        extra = json.loads(hdr_arg) if hdr_arg else {}
+    except Exception:
+        extra = {}
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                      "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        "Referer": urllib.parse.urlparse(url).scheme + "://" + urllib.parse.urlparse(url).netloc + "/",
+    }
+    for k, v in extra.items():
+        if v:
+            headers[str(k)] = str(v)
+
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        upstream = urllib.request.urlopen(req, timeout=120)
+    except Exception:
+        return "Could not fetch the media from the source.", 502
+
+    ctype = upstream.headers.get("Content-Type") or "application/octet-stream"
+    disp = upstream.headers.get("Content-Disposition")
+    if not disp:
+        fname = urllib.parse.unquote(url.rsplit("/", 1)[-1].split("?")[0]) or "video"
+        if "." not in fname:
+            fname += ".mp4"
+        disp = 'attachment; filename="%s"' % fname.replace('"', "")
+
+    clen = upstream.headers.get("Content-Length", "")
+
+    def generate():
+        while True:
+            chunk = upstream.read(65536)
+            if not chunk:
+                break
+            yield chunk
+
+    return Response(
+        generate(),
+        headers={
+            "Content-Type": ctype,
+            "Content-Disposition": disp,
+            "Content-Length": clen,
+            "Cache-Control": "no-store",
+            "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+        },
+    )
 
 
 @app.route("/")
