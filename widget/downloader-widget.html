@@ -1,0 +1,212 @@
+<!--
+  Social Media Video Downloader Widget
+  Paste this whole block into Odoo Website Builder -> "Embed Code" (</>) block.
+
+  IMPORTANT: change API_BASE below to the public URL of your hosted yt-dlp API.
+  (Or set data-api on the root div: <div id="smvd" data-api="https://your-host.com">)
+-->
+<div id="smvd" class="smvd" data-api="https://YOUR-API-HOST.example.com">
+  <div class="smvd-card">
+    <h2 class="smvd-title">Social Media Video Downloader</h2>
+    <p class="smvd-sub">Paste a video link and we'll show all available qualities &amp; formats.</p>
+
+    <div class="smvd-platforms" id="smvd-platforms"></div>
+
+    <form class="smvd-form" id="smvd-form">
+      <input
+        type="url"
+        id="smvd-url"
+        class="smvd-input"
+        placeholder="https://instagram.com/reel/...  or  https://youtube.com/watch?v=..."
+        autocomplete="off"
+        required
+      />
+      <button type="submit" class="smvd-btn" id="smvd-submit">Download</button>
+    </form>
+
+    <div class="smvd-status" id="smvd-status" hidden></div>
+
+    <div class="smvd-result" id="smvd-result" hidden>
+      <div class="smvd-media">
+        <img id="smvd-thumb" alt="" />
+        <div class="smvd-meta">
+          <h3 id="smvd-vtitle"></h3>
+          <span class="smvd-source" id="smvd-source"></span>
+          <span class="smvd-duration" id="smvd-duration"></span>
+        </div>
+      </div>
+      <div class="smvd-formats" id="smvd-formats"></div>
+    </div>
+
+    <p class="smvd-note">
+      Respect creators' rights. Only download content you own or are licensed to use.
+    </p>
+  </div>
+
+  <style>
+    .smvd { --smvd-accent:#e1306c; --smvd-bg:#fff; --smvd-radius:16px; max-width:720px; margin:0 auto; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
+    .smvd * { box-sizing:border-box; }
+    .smvd-card { background:var(--smvd-bg); border:1px solid #ececec; border-radius:var(--smvd-radius); padding:28px; box-shadow:0 8px 30px rgba(0,0,0,.06); }
+    .smvd-title { margin:0 0 6px; font-size:22px; font-weight:700; background:linear-gradient(90deg,#e1306c,#f77737,#833ab4); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .smvd-sub { margin:0 0 18px; color:#6b7280; font-size:14px; }
+    .smvd-platforms { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+    .smvd-chip { border:1px solid #e5e7eb; background:#f9fafb; color:#374151; padding:6px 12px; border-radius:999px; font-size:12px; cursor:pointer; transition:.15s; }
+    .smvd-chip:hover { border-color:var(--smvd-accent); color:var(--smvd-accent); }
+    .smvd-chip.active { background:var(--smvd-accent); border-color:var(--smvd-accent); color:#fff; }
+    .smvd-form { display:flex; gap:10px; }
+    .smvd-input { flex:1; padding:13px 16px; border:1px solid #d1d5db; border-radius:12px; font-size:15px; outline:none; }
+    .smvd-input:focus { border-color:var(--smvd-accent); box-shadow:0 0 0 3px rgba(225,48,108,.15); }
+    .smvd-btn { padding:13px 22px; border:0; border-radius:12px; background:var(--smvd-accent); color:#fff; font-weight:600; font-size:15px; cursor:pointer; transition:.15s; white-space:nowrap; }
+    .smvd-btn:hover { filter:brightness(1.05); }
+    .smvd-btn:disabled { opacity:.6; cursor:not-allowed; }
+    .smvd-status { margin-top:16px; padding:12px 14px; border-radius:10px; font-size:14px; }
+    .smvd-status.loading { background:#eff6ff; color:#1d4ed8; }
+    .smvd-status.error { background:#fef2f2; color:#b91c1c; }
+    .smvd-result { margin-top:20px; }
+    .smvd-media { display:flex; gap:14px; align-items:flex-start; margin-bottom:14px; }
+    .smvd-media img { width:120px; height:120px; object-fit:cover; border-radius:10px; background:#f3f4f6; flex:none; }
+    .smvd-meta { min-width:0; }
+    .smvd-meta h3 { margin:0 0 6px; font-size:16px; line-height:1.35; }
+    .smvd-source { display:inline-block; background:#f3f4f6; color:#374151; padding:3px 10px; border-radius:999px; font-size:12px; margin-right:6px; }
+    .smvd-duration { display:inline-block; color:#6b7280; font-size:12px; }
+    .smvd-formats { display:flex; flex-direction:column; gap:8px; }
+    .smvd-fmt { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid #ececec; border-radius:12px; }
+    .smvd-fmt .badge { font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px; flex:none; }
+    .smvd-fmt .badge.video { background:#dcfce7; color:#15803d; }
+    .smvd-fmt .badge.video_only { background:#fef9c3; color:#a16207; }
+    .smvd-fmt .badge.audio { background:#e0e7ff; color:#4338ca; }
+    .smvd-fmt .res { font-weight:600; min-width:62px; }
+    .smvd-fmt .ext { color:#6b7280; text-transform:uppercase; font-size:12px; min-width:42px; }
+    .smvd-fmt .size { color:#9ca3af; font-size:12px; flex:1; }
+    .smvd-fmt a { text-decoration:none; background:#111827; color:#fff; padding:8px 14px; border-radius:9px; font-size:13px; font-weight:600; }
+    .smvd-fmt a:hover { background:#000; }
+    .smvd-note { margin:18px 0 0; color:#9ca3af; font-size:12px; text-align:center; }
+    @media (max-width:520px){ .smvd-media{ flex-direction:column;} .smvd-media img{ width:100%; height:auto;} }
+  </style>
+
+  <script>
+    (function () {
+      var root = document.getElementById("smvd");
+      var PLACEHOLDER = "https://YOUR-API-HOST.example.com";
+      var apiAttr = (root.getAttribute("data-api") || "").trim();
+      var API_BASE = (apiAttr || (window.location && window.location.origin && window.location.origin !== "null" ? window.location.origin : "")).replace(/\/+$/, "");
+      var apiMisconfigured = !API_BASE || API_BASE === PLACEHOLDER.replace(/\/+$/, "");
+      var PLATFORMS = [
+        "Instagram", "Facebook", "YouTube", "TikTok", "X (Twitter)", "Pinterest",
+        "Reddit", "LinkedIn", "Threads", "Vimeo", "Dailymotion", "Snapchat",
+        "CapCut", "Likee", "Bilibili", "Xiaohongshu", "Weibo"
+      ];
+
+      var platformsEl = document.getElementById("smvd-platforms");
+      var formEl = document.getElementById("smvd-form");
+      var inputEl = document.getElementById("smvd-url");
+      var submitEl = document.getElementById("smvd-submit");
+      var statusEl = document.getElementById("smvd-status");
+      var resultEl = document.getElementById("smvd-result");
+      var thumbEl = document.getElementById("smvd-thumb");
+      var titleEl = document.getElementById("smvd-vtitle");
+      var sourceEl = document.getElementById("smvd-source");
+      var durationEl = document.getElementById("smvd-duration");
+      var formatsEl = document.getElementById("smvd-formats");
+
+      PLATFORMS.forEach(function (name) {
+        var chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "smvd-chip";
+        chip.textContent = name;
+        chip.addEventListener("click", function () {
+          document.querySelectorAll(".smvd-chip").forEach(function (c) { c.classList.remove("active"); });
+          chip.classList.add("active");
+          inputEl.focus();
+        });
+        platformsEl.appendChild(chip);
+      });
+
+      function fmtSize(b) {
+        if (!b) return "";
+        if (b >= 1073741824) return (b / 1073741824).toFixed(2) + " GB";
+        if (b >= 1048576) return (b / 1048576).toFixed(1) + " MB";
+        if (b >= 1024) return (b / 1024).toFixed(0) + " KB";
+        return b + " B";
+      }
+      function fmtDuration(s) {
+        if (!s) return "";
+        var m = Math.floor(s / 60), sec = Math.floor(s % 60);
+        return m + ":" + (sec < 10 ? "0" : "") + sec;
+      }
+      function setStatus(type, msg) {
+        statusEl.hidden = false;
+        statusEl.className = "smvd-status " + type;
+        statusEl.textContent = msg;
+      }
+      function clearStatus() { statusEl.hidden = true; statusEl.textContent = ""; }
+
+      formEl.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var url = inputEl.value.trim();
+        if (!/^https?:\/\//i.test(url)) {
+          setStatus("error", "Please paste a valid http(s) video link.");
+          return;
+        }
+        if (apiMisconfigured) {
+          setStatus("error", "Widget is not configured. Set data-api=\"https://your-api-host\" on the #smvd div.");
+          return;
+        }
+        resultEl.hidden = true;
+        formatsEl.innerHTML = "";
+        submitEl.disabled = true;
+        setStatus("loading", "Fetching available formats…");
+
+        fetch(API_BASE + "/api/extract?url=" + encodeURIComponent(url), { redirect: "follow" })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+            submitEl.disabled = false;
+            if (!res.ok || !res.data.ok) {
+              setStatus("error", (res.data && res.data.error) || "Could not process this link. The platform may be unsupported or blocked.");
+              return;
+            }
+            render(res.data);
+            clearStatus();
+          })
+          .catch(function () {
+            submitEl.disabled = false;
+            setStatus("error", "Network error reaching the download service. Check the API host is online.");
+          });
+      });
+
+      function render(data) {
+        resultEl.hidden = false;
+        if (data.thumbnail) { thumbEl.src = data.thumbnail; thumbEl.style.display = ""; }
+        else { thumbEl.style.display = "none"; }
+        titleEl.textContent = data.title || "(untitled)";
+        sourceEl.textContent = (data.source || "").replace(/[_\-]?(IE|Extractor)$/i, "");
+        durationEl.textContent = fmtDuration(data.duration);
+
+        formatsEl.innerHTML = "";
+        if (!data.formats || !data.formats.length) {
+          formatsEl.innerHTML = '<div class="smvd-status error">No downloadable formats were found for this link.</div>';
+          return;
+        }
+        data.formats.forEach(function (f) {
+          var row = document.createElement("div");
+          row.className = "smvd-fmt";
+          var label = f.kind === "audio" ? "AUDIO" : (f.kind === "video_only" ? "VIDEO ONLY" : "VIDEO");
+          var size = fmtSize(f.filesize);
+          row.innerHTML =
+            '<span class="badge ' + f.kind + '">' + label + '</span>' +
+            '<span class="res">' + (f.resolution || "—") + '</span>' +
+            '<span class="ext">' + (f.ext || "") + '</span>' +
+            '<span class="size">' + size + (f.format_note ? " · " + f.format_note : "") + '</span>';
+          var a = document.createElement("a");
+          a.href = f.url;
+          a.target = "_blank";
+          a.rel = "noopener";
+          a.download = "";
+          a.textContent = "Download";
+          row.appendChild(a);
+          formatsEl.appendChild(row);
+        });
+      }
+    })();
+  </script>
+</div>
