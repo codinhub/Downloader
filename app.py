@@ -126,9 +126,18 @@ def extract():
             }
         },
     }
-    cookies_file = os.environ.get("YT_COOKIES_FILE") or "/app/cookies.txt"
-    if cookies_file and os.path.exists(cookies_file):
+    cookies_candidates = [
+        os.environ.get("YT_COOKIES_FILE"),
+        "/app/cookies.txt",
+        "/etc/secrets/cookies.txt",
+        "/etc/cookies.txt",
+    ]
+    cookies_file = next((c for c in cookies_candidates if c and os.path.exists(c)), None)
+    if cookies_file:
         ydl_opts["cookiefile"] = cookies_file
+        print("YT cookies loaded from", cookies_file, flush=True)
+    else:
+        print("YT cookies NOT found (tried", cookies_candidates, ")", flush=True)
     po_token = os.environ.get("YT_PO_TOKEN")
     if po_token:
         ydl_opts["extractor_args"]["youtube"]["po_token"] = po_token
