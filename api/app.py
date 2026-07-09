@@ -120,7 +120,18 @@ def extract():
         "simulate": True,
         "socket_timeout": 20,
         "retries": 2,
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["tv", "tv_embedded", "web_smarttv", "ios", "web"],
+            }
+        },
     }
+    cookies_file = os.environ.get("YT_COOKIES_FILE")
+    if cookies_file and os.path.exists(cookies_file):
+        ydl_opts["cookiefile"] = cookies_file
+    po_token = os.environ.get("YT_PO_TOKEN")
+    if po_token:
+        ydl_opts["extractor_args"]["youtube"]["po_token"] = po_token
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
